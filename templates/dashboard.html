@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DataPulse — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #050508;
+    --surface: #0d0d14;
+    --surface2: #13131e;
+    --border: rgba(255,255,255,0.07);
+    --accent:  #7c6af7;
+    --accent2: #f7a26a;
+    --accent3: #6af7c8;
+    --accent4: #f76a6a;
+    --text: #f0effe;
+    --muted: #6b6980;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+
+  /* ── Top nav ── */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 48px;
+    background: rgba(5,5,8,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px;
+    display: flex; align-items: center; gap: 9px;
+  }
+  .logo-dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 14px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+  .nav-right { display: flex; gap: 10px; align-items: center; }
+
+  .nav-meta {
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    color: var(--muted); border: 1px solid var(--border);
+    padding: 4px 12px; border-radius: 20px;
+  }
+
+  .btn-new {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text); padding: 7px 16px; border-radius: 10px;
+    font-family: 'DM Sans', sans-serif; font-size: 13px;
+    cursor: pointer; text-decoration: none;
+    transition: border-color .2s, color .2s;
+  }
+  .btn-new:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Main ── */
+  .main { max-width: 1200px; margin: 0 auto; padding: 40px 32px 60px; }
+
+  /* ── Page header ── */
+  .page-header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    margin-bottom: 32px;
+  }
+  .page-title {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: 30px; letter-spacing: -1px;
+  }
+  .page-sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+  .export-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); padding: 9px 18px; border-radius: 10px;
+    font-family: 'DM Sans', sans-serif; font-size: 13px;
+    cursor: pointer; transition: all .2s;
+  }
+  .export-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── KPI grid ── */
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(4,1fr);
+    gap: 16px; margin-bottom: 28px;
+  }
+
+  .kpi-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; padding: 22px 24px;
+    position: relative; overflow: hidden;
+    transition: transform .2s, border-color .2s;
+    animation: cardIn .5s ease backwards;
+  }
+  .kpi-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,.12); }
+  .kpi-card::before {
+    content: ''; position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: var(--card-accent, var(--accent)); opacity: .8;
+  }
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .kpi-card:nth-child(1) { animation-delay:.1s; --card-accent: var(--accent);  }
+  .kpi-card:nth-child(2) { animation-delay:.2s; --card-accent: var(--accent2); }
+  .kpi-card:nth-child(3) { animation-delay:.3s; --card-accent: var(--accent3); }
+  .kpi-card:nth-child(4) { animation-delay:.4s; --card-accent: var(--accent4); }
+
+  .kpi-label {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 12px;
+  }
+  .kpi-value {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: 30px; letter-spacing: -1px; line-height: 1; margin-bottom: 6px;
+  }
+  .kpi-sub { font-size: 12px; color: var(--muted); }
+
+  /* ── Charts ── */
+  .charts-row {
+    display: grid; grid-template-columns: 2fr 1fr;
+    gap: 16px;
+  }
+
+  .chart-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; padding: 24px;
+    animation: cardIn .5s ease .5s backwards;
+  }
+  .chart-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 20px;
+  }
+  .chart-title {
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px;
+  }
+  .chart-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .chart-badge {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    padding: 3px 10px; border-radius: 20px;
+    background: rgba(124,106,247,.1);
+    border: 1px solid rgba(124,106,247,.2);
+    color: var(--accent);
+  }
+
+  /* ── History drawer ── */
+  .history-section { margin-top: 32px; }
+
+  .section-title {
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px;
+    margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+  }
+  .section-badge {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    padding: 2px 9px; border-radius: 20px;
+    background: rgba(124,106,247,.1);
+    border: 1px solid rgba(124,106,247,.2);
+    color: var(--accent);
+  }
+
+  .history-table {
+    width: 100%; border-collapse: collapse;
+    font-size: 13px;
+  }
+  .history-table th {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); text-align: left;
+    padding: 8px 14px; border-bottom: 1px solid var(--border);
+  }
+  .history-table td {
+    padding: 12px 14px; border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  .history-table tr:last-child td { border-bottom: none; }
+  .history-table tbody tr {
+    cursor: pointer; transition: background .15s;
+  }
+  .history-table tbody tr:hover { background: rgba(124,106,247,.05); }
+  .history-table tbody tr.active-row { background: rgba(124,106,247,.1); }
+
+  .status-badge {
+    display: inline-block; font-family: 'DM Mono', monospace;
+    font-size: 10px; padding: 3px 9px; border-radius: 20px;
+  }
+  .status-success { background: rgba(106,247,200,.1); color: var(--accent3); border: 1px solid rgba(106,247,200,.2); }
+  .status-error   { background: rgba(247,106,106,.1); color: var(--accent4); border: 1px solid rgba(247,106,106,.2); }
+  .status-pending { background: rgba(247,162,106,.1); color: var(--accent2); border: 1px solid rgba(247,162,106,.2); }
+
+  /* ── No data screen ── */
+  #no-data-screen {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 60vh; gap: 16px; color: var(--muted); text-align: center;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    nav { padding: 16px 20px; }
+    .main { padding: 24px 16px 40px; }
+    .kpi-grid { grid-template-columns: repeat(2,1fr); }
+    .charts-row { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 540px) {
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+    .page-header { flex-direction: column; align-items: flex-start; gap: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Navigation ── -->
+<nav>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    DataPulse
+  </div>
+  <div class="nav-right">
+    <div class="nav-meta" id="nav-meta">—</div>
+    <a href="/" class="btn-new">↑ Nouveau fichier</a>
+  </div>
+</nav>
+
+<!-- ── No data fallback ── -->
+<div id="no-data-screen" style="display:none">
+  <div style="font-size:48px">📭</div>
+  <div style="font-family:'Syne',sans-serif; font-weight:700; font-size:20px; color:var(--text)">Aucune donnée disponible</div>
+  <div>Importez un fichier depuis la page d'accueil</div>
+  <a href="/" style="color:var(--accent); font-family:'DM Mono',monospace; font-size:13px; margin-top:8px">→ Importer un fichier</a>
+</div>
+
+<!-- ── Dashboard content ── -->
+<div class="main" id="dashboard-content">
+
+  <div class="page-header">
+    <div>
+      <div class="page-title">Vue d'ensemble</div>
+      <div class="page-sub" id="report-meta">Chargement…</div>
+    </div>
+    <button class="export-btn" onclick="window.print()">↓ Exporter PDF</button>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">💰 Chiffre d'Affaires</div>
+      <div class="kpi-value" id="kpi-ca">—</div>
+      <div class="kpi-sub">Commandes livrées uniquement</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">📦 Total Commandes</div>
+      <div class="kpi-value" id="kpi-cmd">—</div>
+      <div class="kpi-sub">Toutes transactions</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">🛒 Panier Moyen</div>
+      <div class="kpi-value" id="kpi-panier">—</div>
+      <div class="kpi-sub">Par commande livrée</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">✅ Taux de Livraison</div>
+      <div class="kpi-value" id="kpi-taux">—</div>
+      <div class="kpi-sub">Livré / Total</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Évolution du CA</div>
+          <div class="chart-sub">Chiffre d'affaires journalier (livrés)</div>
+        </div>
+        <div class="chart-badge">Line</div>
+      </div>
+      <div style="position:relative; height:240px">
+        <canvas id="trendChart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Statuts</div>
+          <div class="chart-sub">Répartition des commandes</div>
+        </div>
+        <div class="chart-badge">Pie</div>
+      </div>
+      <div style="position:relative; height:240px">
+        <canvas id="statusChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="history-section">
+    <div class="section-title">
+      Historique des imports
+      <span class="section-badge" id="history-count">0</span>
+    </div>
+    <div class="chart-card" style="padding:0; overflow:hidden">
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>Fichier</th>
+            <th>Date</th>
+            <th>Lignes</th>
+            <th>CA (DH)</th>
+            <th>Taux livraison</th>
+            <th>Statut</th>
+          </tr>
+        </thead>
+        <tbody id="history-body">
+          <tr><td colspan="6" style="text-align:center; color:var(--muted); padding:24px">Chargement…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /#dashboard-content -->
+
+<script>
+  let charts = {};
+  const COLORS = ['#7c6af7','#f7a26a','#6af7c8','#f76a6a','#6ab5f7','#f76ab5'];
+  const STATUS_COLORS = { 'Livré':'#6af7c8','Refusé':'#f76a6a','Retourné':'#f7a26a','Annulé':'#6b6980','En cours':'#6ab5f7' };
+
+  Chart.defaults.color = '#6b6980';
+  Chart.defaults.font.family = "'DM Mono', monospace";
+  Chart.defaults.font.size = 11;
+
+  function fmtDH(val) {
+    if (val >= 1000000) return (val/1000000).toFixed(1) + 'M DH';
+    if (val >= 1000)    return (val/1000).toFixed(1) + 'k DH';
+    return val.toFixed(0) + ' DH';
+  }
+
+  /* ── Render dashboard from data object ── */
+  function renderDashboard(data) {
+    // Nav meta
+    document.getElementById('nav-meta').textContent = data.import_name || '';
+    // Page sub
+    document.getElementById('report-meta').textContent =
+      `${data.total_rows} lignes · importé le ${data.import_date || ''}`;
+
+    // KPIs
+    document.getElementById('kpi-ca').textContent     = fmtDH(data.kpis.chiffre_affaires);
+    document.getElementById('kpi-cmd').textContent    = data.kpis.total_commandes.toLocaleString('fr');
+    document.getElementById('kpi-panier').textContent = fmtDH(data.kpis.panier_moyen);
+    document.getElementById('kpi-taux').textContent   = data.kpis.taux_livraison + '%';
+
+    buildTrendChart(data.trend_data);
+    buildStatusChart(data.status_breakdown);
+  }
+
+  function buildTrendChart(d) {
+    if (charts.trend) charts.trend.destroy();
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    const grad = ctx.createLinearGradient(0, 0, 0, 240);
+    grad.addColorStop(0, 'rgba(124,106,247,0.3)');
+    grad.addColorStop(1, 'rgba(124,106,247,0)');
+    charts.trend = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: d.labels,
+        datasets: [{ label:'CA (DH)', data:d.values,
+          borderColor:'#7c6af7', backgroundColor:grad,
+          borderWidth:2, pointRadius:0, pointHoverRadius:5,
+          pointHoverBackgroundColor:'#7c6af7', fill:true, tension:0.4 }]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false },
+          tooltip:{ backgroundColor:'#0d0d14', borderColor:'rgba(124,106,247,0.3)',
+            borderWidth:1, titleColor:'#f0effe', bodyColor:'#6b6980',
+            callbacks:{ label: c => ' '+fmtDH(c.parsed.y) } }},
+        scales:{
+          x:{ grid:{ color:'rgba(255,255,255,0.04)' }, ticks:{ maxTicksLimit:8 } },
+          y:{ grid:{ color:'rgba(255,255,255,0.04)' }, ticks:{ callback:v => fmtDH(v) } }
+        }
+      }
+    });
+  }
+
+  function buildStatusChart(d) {
+    if (charts.status) charts.status.destroy();
+    const ctx = document.getElementById('statusChart').getContext('2d');
+    const bg = d.labels.map(l => STATUS_COLORS[l] || '#6b6980');
+    charts.status = new Chart(ctx, {
+      type:'pie',
+      data:{
+        labels:d.labels,
+        datasets:[{ data:d.values, backgroundColor:bg,
+          borderColor:'#050508', borderWidth:3, hoverOffset:8 }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{ position:'bottom', labels:{ padding:14, usePointStyle:true, pointStyleWidth:8 } },
+          tooltip:{ backgroundColor:'#0d0d14', borderColor:'rgba(124,106,247,0.3)',
+            borderWidth:1, titleColor:'#f0effe', bodyColor:'#6b6980',
+            callbacks:{ label: c => {
+              const total = c.dataset.data.reduce((a,b)=>a+b,0);
+              return ` ${c.label}: ${c.parsed} (${((c.parsed/total)*100).toFixed(1)}%)`;
+            }}}
+        }
+      }
+    });
+  }
+
+  /* ── Load history from DB ── */
+  async function loadHistory() {
+    try {
+      const res  = await fetch('/history');
+      const list = await res.json();
+      document.getElementById('history-count').textContent = list.length;
+      const tbody = document.getElementById('history-body');
+      if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Aucun import enregistré</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map(imp => `
+        <tr onclick="loadImport(${imp.id})" data-id="${imp.id}">
+          <td style="font-family:'DM Mono',monospace;font-size:12px">${imp.name}</td>
+          <td style="color:var(--muted)">${imp.imported_at}</td>
+          <td>${imp.total_rows != null ? imp.total_rows.toLocaleString('fr') : '—'}</td>
+          <td>${imp.chiffre_affaires != null ? fmtDH(imp.chiffre_affaires) : '—'}</td>
+          <td>${imp.taux_livraison != null ? imp.taux_livraison+'%' : '—'}</td>
+          <td><span class="status-badge status-${imp.status === 'success' ? 'success' : imp.status === 'error' ? 'error' : 'pending'}">${imp.status}</span></td>
+        </tr>`).join('');
+    } catch(e) {
+      document.getElementById('history-body').innerHTML =
+        '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Impossible de charger l\'historique</td></tr>';
+    }
+  }
+
+  /* ── Load a past import from DB ── */
+  async function loadImport(id) {
+    // Highlight row
+    document.querySelectorAll('.history-table tbody tr').forEach(r => r.classList.remove('active-row'));
+    const row = document.querySelector(`.history-table tbody tr[data-id="${id}"]`);
+    if (row) row.classList.add('active-row');
+
+    try {
+      const res  = await fetch(`/import/${id}`);
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      renderDashboard(data);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch(e) {
+      alert('Erreur lors du chargement des données.');
+    }
+  }
+
+  /* ── Init ── */
+  window.addEventListener('DOMContentLoaded', () => {
+    const stored = sessionStorage.getItem('analyticsData');
+    if (stored) {
+      try {
+        renderDashboard(JSON.parse(stored));
+        sessionStorage.removeItem('analyticsData'); // data is now in DB
+      } catch(e) {
+        document.getElementById('no-data-screen').style.display = 'flex';
+        document.getElementById('dashboard-content').style.display = 'none';
+      }
+    } else {
+      // No fresh upload — try to load latest from DB
+      fetch('/history')
+        .then(r => r.json())
+        .then(list => {
+          if (list.length && list[0].status === 'success') {
+            loadImport(list[0].id);
+          } else {
+            document.getElementById('report-meta').textContent = 'Cliquez sur un import dans l\'historique';
+          }
+        }).catch(() => {});
+    }
+    loadHistory();
+  });
+</script>
+</body>
+</html>
